@@ -1,15 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System.ComponentModel;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
-using Microsoft.CodeAnalysis.FindSymbols;
-using Microsoft.CodeAnalysis.Formatting;
-using Microsoft.CodeAnalysis.Editing;
-using RefactorMCP.ConsoleApp.SyntaxRewriters;
-
 [McpServerToolType]
 public static class SafeDeleteTool
 {
@@ -107,7 +95,8 @@ public static class SafeDeleteTool
         var semanticModel = await document.GetSemanticModelAsync();
         var symbol = semanticModel!.GetDeclaredSymbol(variable) as IFieldSymbol;
         var refs = await SymbolFinder.FindReferencesAsync(symbol!, document.Project.Solution);
-        var count = refs.SelectMany(r => r.Locations).Count() - 1;
+        var declSpan = symbol!.Locations.FirstOrDefault(l => l.IsInSource)?.SourceSpan;
+        var count = refs.SelectMany(r => r.Locations).Count(l => l.Location.IsInSource && l.Location.SourceSpan != declSpan);
         if (count > 0)
             throw new McpException($"Error: Field '{fieldName}' is referenced {count} time(s)");
 
@@ -164,7 +153,8 @@ public static class SafeDeleteTool
         var semanticModel = await document.GetSemanticModelAsync();
         var symbol = semanticModel!.GetDeclaredSymbol(method)!;
         var refs = await SymbolFinder.FindReferencesAsync(symbol, document.Project.Solution);
-        var count = refs.SelectMany(r => r.Locations).Count() - 1;
+        var declSpan = symbol.Locations.FirstOrDefault(l => l.IsInSource)?.SourceSpan;
+        var count = refs.SelectMany(r => r.Locations).Count(l => l.Location.IsInSource && l.Location.SourceSpan != declSpan);
         if (count > 0)
             throw new McpException($"Error: Method '{methodName}' is referenced {count} time(s)");
 
@@ -285,7 +275,8 @@ public static class SafeDeleteTool
         var semanticModel = await document.GetSemanticModelAsync();
         var symbol = semanticModel!.GetDeclaredSymbol(variable)!;
         var refs = await SymbolFinder.FindReferencesAsync(symbol, document.Project.Solution);
-        var count = refs.SelectMany(r => r.Locations).Count() - 1;
+        var declSpan = symbol.Locations.FirstOrDefault(l => l.IsInSource)?.SourceSpan;
+        var count = refs.SelectMany(r => r.Locations).Count(l => l.Location.IsInSource && l.Location.SourceSpan != declSpan);
         if (count > 0)
             throw new McpException($"Error: Variable '{variable.Identifier.ValueText}' is referenced {count} time(s)");
 

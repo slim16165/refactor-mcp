@@ -37,6 +37,6 @@ public class CleanupSample
 
         Assert.Contains("Removed unused usings", result);
         var fileContent = await File.ReadAllTextAsync(testFile);
-        Assert.Equal(expectedCode, fileContent.Replace("\r\n", "\n"));
+        Assert.Equal(expectedCode.Replace("\r\n", "\n"), fileContent.Replace("\r\n", "\n"));
     }
 }

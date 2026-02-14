@@ -1,19 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System;
-using System.ComponentModel;
-using System.Linq;
-using Microsoft.CodeAnalysis;
-using System.Collections.Generic;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using Microsoft.CodeAnalysis.Text;
-using System.IO;
-using System.Threading;
-
-namespace RefactorMCP.ConsoleApp.Tools;
-
 public static class MoveMethodFileService
 {
     // ===== FILE OPERATION LAYER =====
@@ -254,6 +238,4 @@ public static class MoveMethodFileService
 
         return baseName;
     }
-
-
 }

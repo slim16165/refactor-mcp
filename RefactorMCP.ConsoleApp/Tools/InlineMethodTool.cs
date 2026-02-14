@@ -1,18 +1,6 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System.ComponentModel;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using Microsoft.CodeAnalysis.FindSymbols;
-using System.Linq;
-using System.IO;
-
 [McpServerToolType]
 public static class InlineMethodTool
 {
-
     private static async Task InlineReferences(MethodDeclarationSyntax method, Solution solution, ISymbol methodSymbol)
     {
         var refs = await SymbolFinder.FindReferencesAsync(methodSymbol, solution);

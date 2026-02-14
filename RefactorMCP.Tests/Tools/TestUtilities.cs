@@ -44,13 +44,13 @@ public class TestClass
 """;
 
     public static string GetSampleCodeForIntroduceField() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForIntroduceVariable() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForMakeFieldReadonly() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForMakeFieldReadonlyNoInit() => """
 using System;
@@ -61,13 +61,13 @@ public class TestClass
 """;
 
     public static string GetSampleCodeForTransformSetter() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForConvertToStaticInstance() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForMoveStaticMethod() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForMoveStaticMethodWithUsings() => """
 using System;
@@ -85,13 +85,13 @@ public class UtilClass { }
 """;
 
     public static string GetSampleCodeForMoveInstanceMethod() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForConvertToExtension() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForSafeDelete() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForMoveInstanceMethodWithDependencies() => """
 using System;
@@ -170,10 +170,10 @@ public class CleanupSample
 """;
 
     public static string GetSampleCodeForMoveTypeToFile() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForRenameSymbol() =>
-        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "ExampleCode.cs"));
+        File.ReadAllText(Path.Combine(Path.GetDirectoryName(GetSolutionPath())!, "RefactorMCP.Tests", "Tools", "ExampleCode.cs"));
 
     public static string GetSampleCodeForExtractInterface() => """
 public class Person

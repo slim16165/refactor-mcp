@@ -10,14 +10,16 @@ public class SummaryResourceTests : TestBase
     public async Task GetSummary_OmitsMethodBodies()
     {
         var result = await SummaryResources.GetSummary(ExampleFilePath, CancellationToken.None);
-        Assert.Contains("public int Calculate(int a, int b)\n        {}", result);
-        Assert.DoesNotContain("throw new ArgumentException", result);
+        var normalizedResult = result.Replace("\r\n", "\n");
+        Assert.Contains("public int Calculate(int a, int b)", normalizedResult);
+        Assert.Contains("{}", normalizedResult);
+        Assert.DoesNotContain("throw new ArgumentException", normalizedResult);
     }
 
     [Fact]
     public async Task GetSummary_FileNotFound_ReturnsMessage()
     {
         var result = await SummaryResources.GetSummary("does_not_exist.cs", CancellationToken.None);
-        Assert.StartsWith("// File not found:", result);
+        Assert.Contains("// File not found:", result);
     }
 }

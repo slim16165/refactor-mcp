@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using RefactorMCP.ConsoleApp.Tools;
 using Xunit;
 
 namespace RefactorMCP.Tests.Examples;
@@ -50,7 +49,7 @@ public class ExampleVerificationTests : TestBase
         var result = await ExtractMethodTool.ExtractMethod(
             SolutionPath,
             testFile,
-            "26:9-49:10",  // The validation block
+            "28:9-53:10",  // The validation block
             "ValidateOrderAsync");
 
         Assert.Contains("Successfully extracted method", result);
@@ -96,7 +95,7 @@ public class ExampleVerificationTests : TestBase
         var result = await IntroduceVariableTool.IntroduceVariable(
             SolutionPath,
             testFile,
-            "19:30-19:97",  // The .Where expression
+            "21:17-21:97",  // The .Where expression
             "monthlyTransactions");
 
         Assert.Contains("Successfully introduced variable", result);

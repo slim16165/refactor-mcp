@@ -1,13 +1,4 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System.ComponentModel;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Editing;
-using System.Linq;
 
 [McpServerToolType]
 public static class IntroduceFieldTool
@@ -80,7 +71,7 @@ public static class IntroduceFieldTool
         var rewriter = new FieldIntroductionRewriter(selectedExpression, fieldReference, fieldDeclaration, containingClass);
         var newRoot = rewriter.Visit(syntaxRoot);
 
-        var formattedRoot = Formatter.Format(newRoot, document.Project.Solution.Workspace);
+        var formattedRoot = Formatter.Format(newRoot!, document.Project.Solution.Workspace);
         await RefactoringHelpers.WriteAndUpdateCachesAsync(document, formattedRoot);
 
         return $"Successfully introduced {accessModifier} field '{fieldName}' from {selectionRange} in {document.FilePath} (solution mode)";
@@ -155,8 +146,7 @@ public static class IntroduceFieldTool
         var rewriter = new FieldIntroductionRewriter(selectedExpression, fieldReference, fieldDeclaration, containingClass);
         var newRoot = rewriter.Visit(syntaxRoot);
 
-        var formattedRoot = Formatter.Format(newRoot, RefactoringHelpers.SharedWorkspace);
+        var formattedRoot = Formatter.Format(newRoot!, RefactoringHelpers.SharedWorkspace);
         return formattedRoot.ToFullString();
     }
-
 }

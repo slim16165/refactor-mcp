@@ -1,7 +1,6 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using RefactorMCP.ConsoleApp.Tools;
 using Xunit;
 
 namespace RefactorMCP.Tests.Tools;

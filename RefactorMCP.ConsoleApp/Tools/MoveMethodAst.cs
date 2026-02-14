@@ -1,19 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System;
-using System.ComponentModel;
-using System.Linq;
-using Microsoft.CodeAnalysis;
-using System.Collections.Generic;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using Microsoft.CodeAnalysis.Text;
-using RefactorMCP.ConsoleApp.SyntaxRewriters;
-using RefactorMCP.ConsoleApp.SyntaxWalkers;
-
-namespace RefactorMCP.ConsoleApp.Tools;
-
 public static partial class MoveMethodAst
 {
     // ===== AST TRANSFORMATION LAYER =====
@@ -702,8 +686,8 @@ public static partial class MoveMethodAst
             : SyntaxFactory.ReturnStatement(invocation);
 
         var mods = method.Modifiers.Where(m => !m.IsKind(SyntaxKind.OverrideKeyword)
-                                              && !m.IsKind(SyntaxKind.VirtualKeyword)
-                                              && !m.IsKind(SyntaxKind.AbstractKeyword));
+                                               && !m.IsKind(SyntaxKind.VirtualKeyword)
+                                               && !m.IsKind(SyntaxKind.AbstractKeyword));
 
         return method.WithIdentifier(SyntaxFactory.Identifier(wrapperName))
             .WithModifiers(SyntaxFactory.TokenList(mods))
@@ -797,8 +781,7 @@ public static partial class MoveMethodAst
             }
             else if (!string.IsNullOrEmpty(namespaceName))
             {
-                var ns = SyntaxFactory.FileScopedNamespaceDeclaration(
-                        SyntaxFactory.ParseName(namespaceName))
+                var ns = SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(namespaceName))
                     .AddMembers(newClass);
                 return compilationUnit.AddMembers(ns);
             }
@@ -807,35 +790,22 @@ public static partial class MoveMethodAst
                 return compilationUnit.AddMembers(newClass);
             }
         }
-        else
-        {
-            if (targetClassDecl.Modifiers.Any(SyntaxKind.StaticKeyword) &&
-                !method.Modifiers.Any(SyntaxKind.StaticKeyword))
-            {
-                throw new McpException(
-                    $"Error: Cannot move instance method '{method.Identifier.ValueText}' to static class '{targetClass}'");
-            }
 
-            var updatedClass = targetClassDecl.AddMembers(method.WithLeadingTrivia());
-            return targetRoot.ReplaceNode(targetClassDecl, updatedClass);
-        }
+        var newTargetClass = targetClassDecl.AddMembers(method.WithLeadingTrivia());
+        return targetRoot.ReplaceNode(targetClassDecl, newTargetClass);
     }
 
-    public static SyntaxNode PropagateUsings(
-        SyntaxNode sourceRoot,
-        SyntaxNode targetRoot,
-        string? namespaceName = null)
+    public static SyntaxNode PropagateUsings(SyntaxNode sourceRoot, SyntaxNode targetRoot, string? sourceNamespace = null)
     {
-        var sourceCompilationUnit = sourceRoot as CompilationUnitSyntax ?? throw new InvalidOperationException("Expected compilation unit");
-        var sourceUsings = sourceCompilationUnit.Usings.ToList();
-
+        var sourceUsings = sourceRoot.DescendantNodes().OfType<UsingDirectiveSyntax>().ToList();
         var targetCompilationUnit = targetRoot as CompilationUnitSyntax ?? throw new InvalidOperationException("Expected compilation unit");
         var targetUsingNames = targetCompilationUnit.Usings
-            .Select(u => u.Name.ToString())
+            .Select(u => u.Name?.ToString() ?? string.Empty)
             .ToHashSet();
+
         var missingUsings = sourceUsings
-            .Where(u => !targetUsingNames.Contains(u.Name.ToString()))
-            .Where(u => namespaceName == null || u.Name.ToString() != namespaceName)
+            .Where(u => u.Name != null && !targetUsingNames.Contains(u.Name.ToString()))
+            .Where(u => sourceNamespace == null || (u.Name != null && u.Name.ToString() != sourceNamespace))
             .ToArray();
 
         if (missingUsings.Length > 0)

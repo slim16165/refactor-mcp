@@ -1,10 +1,4 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using RefactorMCP.ConsoleApp.SyntaxWalkers;
-using System.ComponentModel;
-using System.Threading;
 
 [McpServerToolType, McpServerPromptType]
 public static class AnalyzeRefactoringOpportunitiesTool
@@ -56,5 +50,4 @@ public static class AnalyzeRefactoringOpportunitiesTool
         var syntaxTree = CSharpSyntaxTree.ParseText(fileText);
         return (syntaxTree, null, null);
     }
-
 }

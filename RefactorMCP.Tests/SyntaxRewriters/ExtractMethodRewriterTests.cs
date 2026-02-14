@@ -18,7 +18,7 @@ public class ExtractMethodRewriterTests
         var root = tree.GetRoot();
         var method = root.DescendantNodes().OfType<MethodDeclarationSyntax>().First();
         var firstStmt = method.Body!.Statements.First();
-        var rewriter = new ExtractMethodRewriter(method, root.DescendantNodes().OfType<ClassDeclarationSyntax>().First(), new List<StatementSyntax> { firstStmt }, "NewMethod");
+        var rewriter = new ExtractMethodRewriter(method, root.DescendantNodes().OfType<ClassDeclarationSyntax>().First(), new List<StatementSyntax> { firstStmt }, "NewMethod", new DataFlowAnalysisResult());
         var newRoot = Formatter.Format(rewriter.Visit(root)!, RefactoringHelpers.SharedWorkspace);
         var text = newRoot.ToFullString();
         Assert.Contains("private void NewMethod()", text);

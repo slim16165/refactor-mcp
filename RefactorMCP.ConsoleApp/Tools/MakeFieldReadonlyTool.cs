@@ -1,13 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System.ComponentModel;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using System.Linq;
-using System.Threading;
-
 [McpServerToolType]
 public static class MakeFieldReadonlyTool
 {
@@ -87,5 +77,4 @@ public static class MakeFieldReadonlyTool
         var formattedRoot = Formatter.Format(newRoot!, RefactoringHelpers.SharedWorkspace);
         return formattedRoot.ToFullString();
     }
-
 }

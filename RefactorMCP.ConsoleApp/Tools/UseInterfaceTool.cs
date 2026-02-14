@@ -1,11 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using System.ComponentModel;
-
 [McpServerToolType]
 public static class UseInterfaceTool
 {

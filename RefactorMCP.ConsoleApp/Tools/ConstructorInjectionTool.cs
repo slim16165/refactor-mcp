@@ -1,12 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System.ComponentModel;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using Microsoft.CodeAnalysis.Text;
-
 [McpServerToolType]
 public static class ConstructorInjectionTool
 {
@@ -92,4 +83,3 @@ public static class ConstructorInjectionTool
         return formatted.ToFullString();
     }
 }
-

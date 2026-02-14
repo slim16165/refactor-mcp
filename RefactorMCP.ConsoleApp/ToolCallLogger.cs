@@ -1,18 +1,26 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
 internal static class ToolCallLogger
 {
     private const string LogFileEnvVar = "REFACTOR_MCP_LOG_FILE";
     private static string _logFile = "tool-call-log.jsonl";
+    private static ILogger? _logger;
 
     public static string DefaultLogFile => _logFile;
+
+    public static void InitializeLogger(ILogger logger)
+    {
+        _logger = logger;
+    }
 
     public static void SetLogDirectory(string directory)
     {
@@ -29,6 +37,37 @@ internal static class ToolCallLogger
             _logFile = file;
     }
 
+    /// <summary>
+    /// Starts logging a tool call with detailed tracking
+    /// </summary>
+    public static ToolCallScope LogToolStart(string toolName, object? parameters = null)
+    {
+        var callId = Guid.NewGuid().ToString("N")[..8];
+        var startTime = DateTime.UtcNow;
+        
+        // Log to structured logger
+        _logger?.LogInformation("[{CallId}] TOOL_START: {ToolName} {@Parameters}", 
+            callId, toolName, parameters);
+            
+        // Log to JSONL file
+        var startRecord = new DetailedToolCallRecord
+        {
+            CallId = callId,
+            Tool = toolName,
+            Parameters = parameters,
+            Timestamp = startTime,
+            Status = "START",
+            DurationMs = null
+        };
+        
+        LogDetailedRecord(startRecord);
+        
+        return new ToolCallScope(callId, toolName, startTime, parameters);
+    }
+
+    /// <summary>
+    /// Logs a simple tool call (legacy compatibility)
+    /// </summary>
     public static void Log(string toolName, Dictionary<string, string?> parameters, string? logFile = null)
     {
         var file = logFile ?? DefaultLogFile;
@@ -46,11 +85,88 @@ internal static class ToolCallLogger
         File.AppendAllText(file, json + Environment.NewLine);
     }
 
+    private static void LogDetailedRecord(DetailedToolCallRecord record)
+    {
+        var dir = Path.GetDirectoryName(_logFile);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+
+        var json = JsonSerializer.Serialize(record);
+        File.AppendAllText(_logFile, json + Environment.NewLine);
+    }
+
+    /// <summary>
+    /// Scope for tracking tool call lifecycle
+    /// </summary>
+    public class ToolCallScope : IDisposable
+    {
+        private readonly string _callId;
+        private readonly string _toolName;
+        private readonly DateTime _startTime;
+        private readonly object? _parameters;
+        private string _status = "Running";
+        private bool _disposed = false;
+
+        public ToolCallScope(string callId, string toolName, DateTime startTime, object? parameters)
+        {
+            _callId = callId;
+            _toolName = toolName;
+            _startTime = startTime;
+            _parameters = parameters;
+        }
+
+        public void SetStatus(string status)
+        {
+            _status = status;
+        }
+
+        public void SetSuccess()
+        {
+            _status = "Success";
+        }
+
+        public void SetError(Exception? exception = null)
+        {
+            _status = "Error";
+            if (exception != null)
+            {
+                _logger?.LogError(exception, "[{_callId}] TOOL_ERROR: {_toolName}", _callId, _toolName);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                var duration = DateTime.UtcNow - _startTime;
+                
+                // Log to structured logger
+                _logger?.LogInformation("[{_callId}] TOOL_END: {_toolName} DURATION={Duration}ms STATUS={Status} {@Parameters}", 
+                    _callId, _toolName, duration.TotalMilliseconds, _status, _parameters);
+                
+                // Log to JSONL file
+                var endRecord = new DetailedToolCallRecord
+                {
+                    CallId = _callId,
+                    Tool = _toolName,
+                    Parameters = _parameters,
+                    Timestamp = DateTime.UtcNow,
+                    Status = _status,
+                    DurationMs = (long)duration.TotalMilliseconds
+                };
+                
+                LogDetailedRecord(endRecord);
+                
+                _disposed = true;
+            }
+        }
+    }
+
     public static async Task Playback(string logFilePath)
     {
         if (!File.Exists(logFilePath))
         {
-            Console.WriteLine($"Log file '{logFilePath}' not found");
+            Console.Error.WriteLine($"Log file '{logFilePath}' not found");
             return;
         }
 
@@ -70,7 +186,7 @@ internal static class ToolCallLogger
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Invalid log entry: {ex.Message}");
+                Console.Error.WriteLine($"Invalid log entry: {ex.Message}");
             }
             if (record != null)
                 await InvokeTool(record.Tool, record.Parameters);
@@ -82,7 +198,7 @@ internal static class ToolCallLogger
         var method = GetToolMethod(toolName);
         if (method == null)
         {
-            Console.WriteLine($"Unknown tool in log: {toolName}");
+            Console.Error.WriteLine($"Unknown tool in log: {toolName}");
             return;
         }
 
@@ -98,7 +214,7 @@ internal static class ToolCallLogger
                     invokeArgs[i] = p.DefaultValue;
                 else
                 {
-                    Console.WriteLine($"Missing parameter {p.Name} for {toolName}");
+                    Console.Error.WriteLine($"Missing parameter {p.Name} for {toolName}");
                     return;
                 }
             }
@@ -110,15 +226,15 @@ internal static class ToolCallLogger
 
         var result = method.Invoke(null, invokeArgs);
         if (result is Task<string> taskStr)
-            Console.WriteLine(await taskStr);
+            Console.Error.WriteLine(await taskStr);
         else if (result is Task task)
         {
             await task;
-            Console.WriteLine("Done");
+            Console.Error.WriteLine("Done");
         }
         else if (result != null)
         {
-            Console.WriteLine(result.ToString());
+            Console.Error.WriteLine(result.ToString());
         }
     }
 
@@ -150,6 +266,16 @@ internal static class ToolCallLogger
         public string Tool { get; set; } = string.Empty;
         public Dictionary<string, string?> Parameters { get; set; } = new();
         public DateTime Timestamp { get; set; }
+    }
+
+    private class DetailedToolCallRecord
+    {
+        public string CallId { get; set; } = string.Empty;
+        public string Tool { get; set; } = string.Empty;
+        public object? Parameters { get; set; }
+        public DateTime Timestamp { get; set; }
+        public string Status { get; set; } = string.Empty; // START, Success, Error, Timeout
+        public long? DurationMs { get; set; }
     }
 }
 

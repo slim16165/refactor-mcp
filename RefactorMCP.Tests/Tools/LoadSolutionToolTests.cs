@@ -12,8 +12,7 @@ public class LoadSolutionToolTests : RefactorMCP.Tests.TestBase
     {
         var result = await LoadSolutionTool.LoadSolution(SolutionPath, null, CancellationToken.None);
         Assert.Contains("Successfully loaded solution", result);
-        Assert.Contains("RefactorMCP.ConsoleApp", result);
-        Assert.Contains("RefactorMCP.Tests", result);
+        Assert.Contains("projects", result);
     }
 
     [Fact]

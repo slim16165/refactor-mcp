@@ -1,17 +1,7 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.ComponentModel;
-using System.Threading;
-
-[McpServerToolType, McpServerPromptType]
+[McpServerToolType]
 public static class ClassLengthMetricsTool
 {
-    [McpServerPrompt, Description("List all classes in the solution with their line counts")]
+    [McpServerTool, Description("Analyze line lengths of classes in all files of a solution")]
     public static async Task<string> ListClassLengths(
         [Description("Absolute path to the solution file (.sln)")] string solutionPath,
         CancellationToken cancellationToken = default)
@@ -19,29 +9,63 @@ public static class ClassLengthMetricsTool
         try
         {
             var solution = await RefactoringHelpers.GetOrLoadSolution(solutionPath, cancellationToken);
-            var classes = new List<(string name, int lines)>();
-            foreach (var doc in solution.Projects.SelectMany(p => p.Documents))
+            var results = new List<string>();
+
+            foreach (var project in solution.Projects)
             {
-                var tree = await doc.GetSyntaxTreeAsync(cancellationToken);
-                if (tree == null) continue;
-                var root = await tree.GetRootAsync(cancellationToken);
-                foreach (var cls in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
+                foreach (var document in project.Documents)
                 {
-                    var span = tree.GetLineSpan(cls.Span);
-                    var lines = span.EndLinePosition.Line - span.StartLinePosition.Line + 1;
-                    classes.Add((cls.Identifier.Text, lines));
+                    if (document.FilePath == null) continue;
+                    
+                    var root = await document.GetSyntaxRootAsync(cancellationToken);
+                    if (root == null) continue;
+
+                    var classes = root.DescendantNodes().OfType<ClassDeclarationSyntax>();
+                    var sourceText = await document.GetTextAsync(cancellationToken);
+
+                    foreach (var @class in classes)
+                    {
+                        var span = @class.FullSpan;
+                        var lines = sourceText.ToString().Substring(span.Start, span.Length).Split('\n').Length;
+                        results.Add($"Class '{@class.Identifier.Text}': {lines} lines (in {document.Name})");
+                    }
                 }
             }
-            if (classes.Count == 0)
-                return "No classes found";
 
-            var ordered = classes.OrderByDescending(c => c.lines)
-                .Select(c => $"{c.name} - {c.lines} lines");
-            return "Class lengths:\n" + string.Join("\n", ordered);
+            return results.Count > 0 ? string.Join("\n", results) : "No classes found in solution.";
         }
         catch (Exception ex)
         {
-            throw new McpException($"Error analyzing classes: {ex.Message}", ex);
+            throw new McpException($"Error analyzing class lengths: {ex.Message}", ex);
+        }
+    }
+
+    [McpServerTool, Description("Analyze line lengths of classes in a specific file")]
+    public static async Task<string> ClassLengthMetrics(
+        [Description("Path to the C# file")] string filePath,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var (sourceText, _) = await RefactoringHelpers.ReadFileWithEncodingAsync(filePath, cancellationToken);
+            var tree = CSharpSyntaxTree.ParseText(sourceText);
+            var root = await tree.GetRootAsync(cancellationToken);
+
+            var classes = root.DescendantNodes().OfType<ClassDeclarationSyntax>();
+            var results = new List<string>();
+
+            foreach (var @class in classes)
+            {
+                var span = @class.FullSpan;
+                var lines = sourceText.Substring(span.Start, span.Length).Split('\n').Length;
+                results.Add($"Class '{@class.Identifier.Text}': {lines} lines");
+            }
+
+            return results.Count > 0 ? string.Join("\n", results) : "No classes found in file.";
+        }
+        catch (Exception ex)
+        {
+            throw new McpException($"Error analyzing class lengths: {ex.Message}", ex);
         }
     }
 }

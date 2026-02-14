@@ -1,15 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System.ComponentModel;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using Microsoft.CodeAnalysis.Text;
-using System.Linq;
-using System.Collections.Generic;
-using System.Threading;
-
 [McpServerToolType]
 public static class ConvertToStaticWithParametersTool
 {
@@ -133,7 +121,6 @@ public static class ConvertToStaticWithParametersTool
 
     private static async Task<string> ConvertToStaticWithParametersWithSolution(Document document, string methodName)
     {
-        var sourceText = await document.GetTextAsync();
         var syntaxRoot = await document.GetSyntaxRootAsync();
 
         var method = syntaxRoot!.DescendantNodes()

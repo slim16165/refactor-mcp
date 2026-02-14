@@ -1,20 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System;
-using System.ComponentModel;
-using System.Linq;
-using Microsoft.CodeAnalysis;
-using System.Collections.Generic;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using Microsoft.CodeAnalysis.Text;
-using System.IO;
-using System.Text;
-using System.Threading;
-using RefactorMCP.ConsoleApp.SyntaxWalkers;
-
-namespace RefactorMCP.ConsoleApp.Tools;
 
 [McpServerToolType]
 public static class MoveMethodTool
@@ -43,6 +26,7 @@ public static class MoveMethodTool
         _movedMethods.Clear();
         return "Cleared move history";
     }
+
     [McpServerTool, Description("Move a static method to another class (preferred for large C# file refactoring). " +
         "Leaves a delegating method in the original class to preserve the interface." +
         "The target class will be automatically created if it doesn't exist.")]
@@ -185,12 +169,12 @@ public static class MoveMethodTool
     {
         var targetCompilationUnit = targetRoot as CompilationUnitSyntax ?? throw new InvalidOperationException("Expected compilation unit");
         var targetUsingNames = targetCompilationUnit.Usings
-            .Select(u => u.Name.ToString())
+            .Select(u => u.Name?.ToString() ?? string.Empty)
             .ToHashSet();
 
         var missingUsings = context.SourceUsings
-            .Where(u => !targetUsingNames.Contains(u.Name.ToString()))
-            .Where(u => context.Namespace == null || u.Name.ToString() != context.Namespace)
+            .Where(u => u.Name != null && !targetUsingNames.Contains(u.Name.ToString()))
+            .Where(u => context.Namespace == null || (u.Name != null && u.Name.ToString() != context.Namespace))
             .ToArray();
 
         if (missingUsings.Length > 0)
@@ -372,10 +356,14 @@ public static class MoveMethodTool
             // Same file operation - use multiple individual AST transformations
             var tree = CSharpSyntaxTree.ParseText(sourceText);
             var root = await tree.GetRootAsync(cancellationToken);
-
+            var semanticModel = await RefactoringHelpers.GetOrCreateSemanticModelAsync(filePath);
+ 
+            var orderedIndices = MoveMethodAst.OrderOperations(root, Enumerable.Repeat(sourceClass, methodNames.Length).ToArray(), methodNames, semanticModel);
+ 
             var suggestStatic = false;
-            foreach (var methodName in methodNames)
+            foreach (var idx in orderedIndices)
             {
+                var methodName = methodNames[idx];
                 var moveResult = MoveMethodAst.MoveInstanceMethodAst(
                     root,
                     sourceClass,
@@ -406,9 +394,13 @@ public static class MoveMethodTool
                 .FirstOrDefault()?.Name.ToString();
             targetRoot = MoveMethodAst.PropagateUsings(sourceRoot, targetRoot, nsName);
 
+            var semanticModel = await RefactoringHelpers.GetOrCreateSemanticModelAsync(filePath);
+            var orderedIndices2 = MoveMethodAst.OrderOperations(sourceRoot, Enumerable.Repeat(sourceClass, methodNames.Length).ToArray(), methodNames, semanticModel);
+ 
             var suggestStatic2 = false;
-            foreach (var methodName in methodNames)
+            foreach (var idx in orderedIndices2)
             {
+                var methodName = methodNames[idx];
                 var moveResult = MoveMethodAst.MoveInstanceMethodAst(
                     sourceRoot,
                     sourceClass,
@@ -455,8 +447,13 @@ public static class MoveMethodTool
         var messages = new List<string>();
         var currentDocument = document;
 
-        foreach (var methodName in methodNames)
+        var root = await currentDocument.GetSyntaxRootAsync(cancellationToken);
+        var semanticModel = await currentDocument.GetSemanticModelAsync(cancellationToken);
+        var orderedIndices = MoveMethodAst.OrderOperations(root!, Enumerable.Repeat(sourceClassName, methodNames.Length).ToArray(), methodNames, semanticModel);
+
+        foreach (var idx in orderedIndices)
         {
+            var methodName = methodNames[idx];
 
             var targetPath = targetFilePath ?? currentDocument.FilePath!;
             var sameFile = targetPath == currentDocument.FilePath;
@@ -486,7 +483,7 @@ public static class MoveMethodTool
                 var newSourceRoot = await CSharpSyntaxTree.ParseText(newSourceText).GetRootAsync(cancellationToken);
                 var solution = document.Project.Solution.WithDocumentSyntaxRoot(currentDocument.Id, newSourceRoot);
 
-                var project = solution.GetProject(document.Project.Id);
+                var project = solution.GetProject(document.Project.Id) ?? throw new McpException("Project not found in solution");
                 var targetDocument = project.Documents.FirstOrDefault(d => d.FilePath == targetPath);
                 if (targetDocument == null)
                 {
@@ -510,4 +507,28 @@ public static class MoveMethodTool
 
         return (string.Join("\n", messages), currentDocument);
     }
+
+    [McpServerTool, Description("Move multiple methods to a target class and transform them to static with an injected 'this' parameter. (Compatibility wrapper)")]
+    public static Task<string> MoveMultipleMethodsStatic(
+        [Description("Absolute path to the solution file (.sln)")] string solutionPath,
+        [Description("Path to the C# file containing the methods")] string filePath,
+        [Description("Name of the source class containing the methods")] string sourceClass,
+        [Description("Names of the methods to move")] string[] methodNames,
+        [Description("Name of the target class")] string targetClass,
+        [Description("Path to the target file (optional)")] string? targetFilePath = null,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+        => MoveInstanceMethod(solutionPath, filePath, sourceClass, methodNames, targetClass, targetFilePath, Array.Empty<string>(), new[] { "this" }, progress, cancellationToken);
+
+    [McpServerTool, Description("Move multiple methods and keep them as instance methods in the target class. The source instance is injected via the constructor if needed. (Compatibility wrapper)")]
+    public static Task<string> MoveMultipleMethodsInstance(
+        [Description("Absolute path to the solution file (.sln)")] string solutionPath,
+        [Description("Path to the C# file containing the methods")] string filePath,
+        [Description("Name of the source class containing the methods")] string sourceClass,
+        [Description("Names of the methods to move")] string[] methodNames,
+        [Description("Name of the target class")] string targetClass,
+        [Description("Path to the target file (optional)")] string? targetFilePath = null,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+        => MoveInstanceMethod(solutionPath, filePath, sourceClass, methodNames, targetClass, targetFilePath, new[] { "this" }, Array.Empty<string>(), progress, cancellationToken);
 }

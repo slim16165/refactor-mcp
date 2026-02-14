@@ -24,12 +24,14 @@ internal class ConstructorInjectionRewriter : CSharpSyntaxRewriter
 
     public override SyntaxNode? VisitMethodDeclaration(MethodDeclarationSyntax node)
     {
-        var visited = node;
         if (node.Identifier.ValueText == _methodName)
         {
             _inTargetMethod = true;
-            visited = (MethodDeclarationSyntax)base.VisitMethodDeclaration(node)!;
+            var visited = (MethodDeclarationSyntax?)base.VisitMethodDeclaration(node);
             _inTargetMethod = false;
+
+            if (visited == null) return node;
+
             if (_parameterIndex < visited.ParameterList.Parameters.Count)
             {
                 var newParams = visited.ParameterList.Parameters.RemoveAt(_parameterIndex);
@@ -40,7 +42,7 @@ internal class ConstructorInjectionRewriter : CSharpSyntaxRewriter
         return base.VisitMethodDeclaration(node);
     }
 
-    public override SyntaxNode VisitIdentifierName(IdentifierNameSyntax node)
+    public override SyntaxNode? VisitIdentifierName(IdentifierNameSyntax node)
     {
         if (_inTargetMethod && node.Identifier.ValueText == _parameterName)
         {
@@ -49,9 +51,11 @@ internal class ConstructorInjectionRewriter : CSharpSyntaxRewriter
         return base.VisitIdentifierName(node);
     }
 
-    public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
+    public override SyntaxNode? VisitInvocationExpression(InvocationExpressionSyntax node)
     {
-        var visited = (InvocationExpressionSyntax)base.VisitInvocationExpression(node)!;
+        var visited = base.VisitInvocationExpression(node) as InvocationExpressionSyntax;
+        if (visited == null) return node;
+        
         if (InvocationHelpers.IsInvocationOf(visited, _methodName) &&
             _parameterIndex < visited.ArgumentList.Arguments.Count)
         {
@@ -60,9 +64,11 @@ internal class ConstructorInjectionRewriter : CSharpSyntaxRewriter
         return visited;
     }
 
-    public override SyntaxNode VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
+    public override SyntaxNode? VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
     {
-        var visited = (ConstructorDeclarationSyntax)base.VisitConstructorDeclaration(node)!;
+        var visited = base.VisitConstructorDeclaration(node) as ConstructorDeclarationSyntax;
+        if (visited == null) return node;
+        
         if (!visited.ParameterList.Parameters.Any(p => p.Identifier.ValueText == _parameterName))
         {
             var param = SyntaxFactory.Parameter(SyntaxFactory.Identifier(_parameterName))
@@ -78,9 +84,11 @@ internal class ConstructorInjectionRewriter : CSharpSyntaxRewriter
         return visited;
     }
 
-    public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node)
+    public override SyntaxNode? VisitClassDeclaration(ClassDeclarationSyntax node)
     {
-        var visited = (ClassDeclarationSyntax)base.VisitClassDeclaration(node)!;
+        var visited = base.VisitClassDeclaration(node) as ClassDeclarationSyntax;
+        if (visited == null) return node;
+        
         if (!visited.Members.OfType<FieldDeclarationSyntax>().Any(f => f.Declaration.Variables.Any(v => v.Identifier.ValueText == _fieldName)) &&
             !visited.Members.OfType<PropertyDeclarationSyntax>().Any(p => p.Identifier.ValueText == _fieldName))
         {

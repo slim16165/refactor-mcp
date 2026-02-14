@@ -1,14 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Rename;
-using Microsoft.CodeAnalysis.FindSymbols;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Threading;
-
 [McpServerToolType]
 public static class RenameSymbolTool
 {

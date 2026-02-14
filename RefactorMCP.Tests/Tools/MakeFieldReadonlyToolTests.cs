@@ -38,7 +38,7 @@ public class Sample
 
         Assert.Contains("Successfully made field", result);
         var fileContent = await File.ReadAllTextAsync(testFile);
-        Assert.Equal(expectedCode, fileContent.Replace("\r\n", "\n"));
+        Assert.Equal(expectedCode.Replace("\r\n", "\n"), fileContent.Replace("\r\n", "\n"));
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class Sample
 
         Assert.Contains("Successfully made field 'description' readonly", result);
         var fileContent = await File.ReadAllTextAsync(testFile);
-        Assert.Equal(expectedCode, fileContent.Replace("\r\n", "\n"));
+        Assert.Equal(expectedCode.Replace("\r\n", "\n"), fileContent.Replace("\r\n", "\n"));
     }
 
     [Fact]

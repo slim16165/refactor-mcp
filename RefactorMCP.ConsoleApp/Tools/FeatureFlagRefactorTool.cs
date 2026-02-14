@@ -1,11 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System.ComponentModel;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-
 [McpServerToolType]
 public static class FeatureFlagRefactorTool
 {
@@ -31,7 +23,6 @@ public static class FeatureFlagRefactorTool
 
     private static async Task<string> RefactorWithSolution(Document document, string flagName)
     {
-        var sourceText = await document.GetTextAsync();
         var syntaxRoot = await document.GetSyntaxRootAsync();
         var rewriter = new FeatureFlagRewriter(flagName);
         var newRoot = (CompilationUnitSyntax)rewriter.Visit(syntaxRoot!);
@@ -75,7 +66,7 @@ public static class FeatureFlagRefactorTool
         {
             var path = Path.Combine(Path.GetDirectoryName(file)!, "refactor-report.json");
             var entry = $"{{\"file\":\"{file}\",\"flag\":\"{flag}\",\"timestamp\":\"{DateTime.UtcNow:o}\"}}";
-            File.AppendAllText(path, entry + System.Environment.NewLine);
+            File.AppendAllText(path, entry + Environment.NewLine);
         }
         catch
         {

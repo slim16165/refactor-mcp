@@ -1,20 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System;
-using System.ComponentModel;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using System.Collections.Generic;
-using System.Linq;
-using System.IO;
-using System.Threading.Tasks;
-using System.Threading;
-using Microsoft.CodeAnalysis.Text;
-using RefactorMCP.ConsoleApp.SyntaxWalkers;
-using RefactorMCP.ConsoleApp.Tools;
-
 [McpServerToolType]
 public static partial class MoveMultipleMethodsTool
 {
@@ -145,7 +128,7 @@ public static partial class MoveMultipleMethodsTool
             accessMemberTypes[i] = isStaticMethod ? string.Empty : instanceMemberType;
         }
 
-        var orderedIndices = OrderOperations(root, Enumerable.Repeat(sourceClass, methodNames.Length).ToArray(), methodNames);
+        var orderedIndices = MoveMethodAst.OrderOperations(root, Enumerable.Repeat(sourceClass, methodNames.Length).ToArray(), methodNames);
 
         var results = new List<string>();
         var moved = new List<(string file, string method)>();

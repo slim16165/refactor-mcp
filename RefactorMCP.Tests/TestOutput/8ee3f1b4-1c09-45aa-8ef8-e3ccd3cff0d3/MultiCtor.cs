@@ -1,0 +1,1 @@
+public class cA{ public int Value=>1; public int Get(){ return Value; } public int Add(int x){ return x + Value; } } public class B{ }

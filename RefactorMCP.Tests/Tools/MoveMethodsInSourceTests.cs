@@ -4,7 +4,6 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
-using RefactorMCP.ConsoleApp.Tools;
 
 namespace RefactorMCP.Tests.Tools
 {
@@ -22,7 +21,7 @@ namespace RefactorMCP.Tests.Tools
             var tree = CSharpSyntaxTree.ParseText(source);
             var root = tree.GetRoot();
 
-            var orderedIndices = MoveMultipleMethodsTool.OrderOperations(root, sourceClasses, methodNames);
+            var orderedIndices = MoveMethodAst.OrderOperations(root, sourceClasses, methodNames);
 
             foreach (var i in orderedIndices)
             {

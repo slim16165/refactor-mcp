@@ -1,14 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System.ComponentModel;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using System.Linq;
-using System.Collections.Generic;
-using System.Threading;
-
 [McpServerToolType]
 public static class ConvertToExtensionMethodTool
 {
@@ -38,7 +27,6 @@ public static class ConvertToExtensionMethodTool
 
     private static async Task<string> ConvertToExtensionMethodWithSolution(Document document, string methodName, string? extensionClass)
     {
-        var sourceText = await document.GetTextAsync();
         var syntaxRoot = await document.GetSyntaxRootAsync();
 
         var method = syntaxRoot!.DescendantNodes()
@@ -92,20 +80,23 @@ public static class ConvertToExtensionMethodTool
         }
         else
         {
-            var duplicateDoc = await RefactoringHelpers.FindClassInSolution(document.Project.Solution, extClassName, document.FilePath!);
-            if (duplicateDoc != null)
-                throw new McpException($"Error: Class {extClassName} already exists in {duplicateDoc.FilePath}");
             var extensionClassDecl = SyntaxFactory.ClassDeclaration(extClassName)
                 .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
                 .AddMembers(updatedMethod);
 
-            if (classDecl.Parent is NamespaceDeclarationSyntax ns)
+            // Find the namespace mechanism in the new root to ensure we're not using a stale node
+            var currentClass = newRoot.DescendantNodes()
+                .OfType<ClassDeclarationSyntax>()
+                .FirstOrDefault(c => c.Identifier.ValueText == className);
+
+            if (currentClass?.Parent is BaseNamespaceDeclarationSyntax ns)
             {
                 var updatedNs = ns.AddMembers(extensionClassDecl);
                 newRoot = newRoot.ReplaceNode(ns, updatedNs);
             }
             else
             {
+                // Fallback or top-level statements
                 newRoot = ((CompilationUnitSyntax)newRoot).AddMembers(extensionClassDecl);
             }
         }
@@ -197,7 +188,12 @@ public static class ConvertToExtensionMethodTool
                 .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.StaticKeyword))
                 .AddMembers(updatedMethod);
 
-            if (classDecl.Parent is NamespaceDeclarationSyntax ns)
+            // Find the namespace mechanism in the new root to ensure we're not using a stale node
+            var currentClass = newRoot.DescendantNodes()
+                .OfType<ClassDeclarationSyntax>()
+                .FirstOrDefault(c => c.Identifier.ValueText == className);
+
+            if (currentClass?.Parent is BaseNamespaceDeclarationSyntax ns)
             {
                 var updatedNs = ns.AddMembers(extensionClassDecl);
                 newRoot = newRoot.ReplaceNode(ns, updatedNs);

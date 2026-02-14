@@ -1,10 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using System.ComponentModel;
-using System.Threading;
-using System.Threading.Tasks;
-using RefactorMCP.ConsoleApp.Tools;
-
 [McpServerToolType]
 public static class MakeStaticThenMoveTool
 {

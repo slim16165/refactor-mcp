@@ -14,7 +14,7 @@ internal class MethodReferenceRewriter : CSharpSyntaxRewriter
         _parameterName = parameterName;
     }
 
-    public override SyntaxNode VisitIdentifierName(IdentifierNameSyntax node)
+    public override SyntaxNode? VisitIdentifierName(IdentifierNameSyntax node)
     {
         if (_methodNames.Contains(node.Identifier.ValueText))
         {
@@ -32,10 +32,10 @@ internal class MethodReferenceRewriter : CSharpSyntaxRewriter
                 return memberAccess.WithTriviaFrom(node);
             }
         }
-        return base.VisitIdentifierName(node)!;
+        return base.VisitIdentifierName(node);
     }
 
-    public override SyntaxNode VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+    public override SyntaxNode? VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
     {
         if (node.Expression is ThisExpressionSyntax &&
             node.Name is IdentifierNameSyntax id &&
@@ -43,9 +43,9 @@ internal class MethodReferenceRewriter : CSharpSyntaxRewriter
             node.Parent is not InvocationExpressionSyntax)
         {
             var updated = node.WithExpression(SyntaxFactory.IdentifierName(_parameterName));
-            return base.VisitMemberAccessExpression(updated)!;
+            return base.VisitMemberAccessExpression(updated);
         }
-        return base.VisitMemberAccessExpression(node)!;
+        return base.VisitMemberAccessExpression(node);
     }
 
     public override SyntaxNode? VisitConditionalAccessExpression(ConditionalAccessExpressionSyntax node)
@@ -53,7 +53,7 @@ internal class MethodReferenceRewriter : CSharpSyntaxRewriter
         // Handle cases like this.method?.Something
         // We need to rewrite the expression before the ?. but leave the binding expression alone
         var rewrittenExpression = (ExpressionSyntax?)Visit(node.Expression);
-        if (rewrittenExpression != node.Expression)
+        if (rewrittenExpression != null && rewrittenExpression != node.Expression)
         {
             return node.WithExpression(rewrittenExpression);
         }

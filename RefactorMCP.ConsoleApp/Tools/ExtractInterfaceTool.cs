@@ -1,12 +1,3 @@
-using ModelContextProtocol.Server;
-using ModelContextProtocol;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Formatting;
-using System.ComponentModel;
-using System.Threading;
-
 [McpServerToolType]
 public static class ExtractInterfaceTool
 {
@@ -89,10 +80,17 @@ public static class ExtractInterfaceTool
             var encoding = await RefactoringHelpers.GetFileEncodingAsync(filePath, cancellationToken);
             await File.WriteAllTextAsync(interfaceFilePath, ifaceUnit.ToFullString(), encoding, cancellationToken);
 
-            var baseList = SyntaxFactory.BaseList(
-                    SyntaxFactory.SingletonSeparatedList<BaseTypeSyntax>(
-                        SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName(interfaceName))))
-                .WithColonToken(SyntaxFactory.Token(SyntaxKind.ColonToken).WithTrailingTrivia(SyntaxFactory.Space));
+            var interfaceType = SyntaxFactory.SimpleBaseType(SyntaxFactory.ParseTypeName(interfaceName));
+            BaseListSyntax baseList;
+            if (classNode.BaseList != null)
+            {
+                baseList = classNode.BaseList.AddTypes(interfaceType);
+            }
+            else
+            {
+                baseList = SyntaxFactory.BaseList(SyntaxFactory.SingletonSeparatedList<BaseTypeSyntax>(interfaceType))
+                    .WithColonToken(SyntaxFactory.Token(SyntaxKind.ColonToken).WithTrailingTrivia(SyntaxFactory.Space));
+            }
             var updatedClass = classNode.WithBaseList(baseList);
             var newRoot = root.ReplaceNode(classNode, updatedClass);
             var formatted = newRoot.NormalizeWhitespace().ToFullString();
