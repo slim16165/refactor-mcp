@@ -1,47 +1,149 @@
 # RefactorMCP
 
-RefactorMCP is a Model Context Protocol server that exposes Roslyn-based refactoring tools for C#.
+RefactorMCP is a Model Context Protocol (MCP) server that exposes robust Roslyn-based C# refactoring tools. 
+Designed for stability, it supports both human interactive CLI usage and agentic automation.
 
-## Usage
+## Features
+- **MCP Server**: Stdio-based server for IDEs and AI agents (Windsurf, Cursor, Claude Desktop).
+- **CLI Tools**: `list-tools`, `doctor`, and JSON-based one-shot invocation.
+- **Robustness**: Normalized tool naming (kebab-case), fuzzy matching, and strict stdout/stderr discipline.
 
-Run the console application directly or host it as an MCP server:
+## Modes
 
+| Mode | Command | Description |
+|------|---------|-------------|
+| **MCP Server** | `refactor-mcp` (or `mcp`) | Starts the JSON-RPC server on Stdio. **Default**. |
+| **List Tools** | `refactor-mcp list-tools` | Lists all available tools in kebab-case. |
+| **JSON Runner**| `refactor-mcp --json <tool> <params>`| Executes a single tool with JSON parameters. |
+| **Doctor** | `refactor-mcp doctor` | Diagnoses environment issues (.NET, MSBuild, Input Redirection). |
+
+---
+
+## Quick Start
+
+### 1. Build & Run (Source)
 ```bash
-dotnet run --project RefactorMCP.ConsoleApp
+cd RefactorMCP.ConsoleApp
+dotnet run
+# NOTE: Without arguments, this starts the server and waits for input.
+# It might look "stuck" - this is normal behavior for MCP servers!
 ```
 
-For usage examples see [EXAMPLES.md](./EXAMPLES.md).
+### 2. Interactive CLI
+```bash
+# List available tools
+dotnet run -- list-tools
 
-## Available Refactorings
+# Check environment
+dotnet run -- doctor
 
-- **Extract Method** – create a new method from selected code and replace the original with a call (expression-bodied methods are not supported).
-- **Introduce Field/Parameter/Variable** – turn expressions into new members; fails if a field already exists.
-- **Convert to Static** – make instance methods static using parameters or an instance argument.
-- **Move Static Method** – relocate a static method and keep a wrapper in the original class.
-- **Move Instance Method** – move one or more instance methods to another class and delegate from the source. If a moved method no longer accesses instance members, it is made static automatically. Provide a `methodNames` list along with optional `constructor-injections` and `parameter-injections` to control dependencies.
-- **Move Multiple Methods (instance)** – move several methods and keep them as instance members of the target class. The source instance is injected via the constructor when required.
-- **Move Multiple Methods (static)** – move multiple methods and convert them to static, adding a `this` parameter.
-- **Make Static Then Move** – convert an instance method to static and relocate it to another class in one step.
-- **Move Type to Separate File** – move a top-level type into its own file named after the type.
-- **Make Field Readonly** – move initialization into constructors and mark the field readonly.
-- **Transform Setter to Init** – convert property setters to init-only and initialize in constructors.
-- **Constructor Injection** – convert method parameters to constructor-injected fields or properties.
-- **Safe Delete** – remove fields or variables only after dependency checks.
-- **Extract Class** – create a new class from selected members and compose it with the original.
-- **Inline Method** – replace calls with the method body and delete the original.
-- **Extract Decorator** – create a decorator class that delegates to an existing method.
-- **Create Adapter** – generate an adapter class wrapping an existing method.
-- **Add Observer** – introduce an event and raise it from a method.
-- **Use Interface** – change a method parameter type to one of its implemented interfaces.
-- **List Tools** – display all available refactoring tools as kebab-case names.
+# Run a specific tool (example)
+dotnet run -- --json extract-method "{\"path\": \"...\", \"selection\": \"...\"}"
+```
 
-Metrics and summaries are also available via the `metrics://` and `summary://` resource schemes.
+### 3. Agent Integration (Windsurf / Claude Desktop / Antigravity)
+Configure your MCP client to run the server.
+
+**Example Configuration (mcp_config.json):**
+```json
+{
+  "mcpServers": {
+    "refactor-mcp": {
+      "command": "C:\\path\\to\\RefactorMCP.ConsoleApp\\bin\\Release\\net10.0\\win-x64\\RefactorMCP.ConsoleApp.exe",
+      "args": [],
+      "env": {},
+      "disabled": false
+    }
+  }
+}
+```
+
+**Important Notes:**
+- Always use **absolute paths** to the executable
+- **Do NOT** include a `\publish\` subdirectory in the path unless you've explicitly published to that location
+- Correct path format: `...\bin\Release\net10.0\win-x64\RefactorMCP.ConsoleApp.exe`
+- Common mistake: `...\bin\Release\net10.0\win-x64\publish\RefactorMCP.ConsoleApp.exe` (incorrect)
+
+**Verification:**
+After configuration, restart your IDE/agent and verify with:
+1. Check tool discovery: The server should expose 36 refactoring tools
+2. Test basic operation: Try `cleanup-usings` or `extract-method` on a C# file
+3. Expected performance: Operations should complete in < 2 seconds
+
+**Note:** Always use absolute paths.
+
+---
+
+## Troubleshooting
+
+### Windows: timeouts e process launch (agent-safe)
+
+**CMD** e **PowerShell** NON sono intercambiabili.
+
+#### Timeout
+- In **Linux/macOS** esiste `timeout 10s <cmd>`.
+- In **Windows CMD** `timeout` è un comando di *sleep* (non kill):  
+  `cmd /c timeout /t 5 /nobreak`
+- In **PowerShell**, per killare dopo N secondi usa `Wait-Process` + `Stop-Process`:
+
+```powershell
+$exe = "RefactorMCP.ConsoleApp\bin\Debug\net9.0\RefactorMCP.ConsoleApp.exe"
+$p = Start-Process -FilePath $exe -PassThru -NoNewWindow
+if (-not (Wait-Process -Id $p.Id -Timeout 2 -ErrorAction SilentlyContinue)) { Stop-Process -Id $p.Id -Force }
+```
+
+#### `start /B` (CMD) vs `Start-Process` (PowerShell)
+
+* `start /B` è **CMD-only**:
+
+  ```cmd
+  cmd /c start "" /B dotnet run --project RefactorMCP.ConsoleApp\RefactorMCP.ConsoleApp.csproj -- mcp
+  ```
+* In PowerShell usa:
+
+  ```powershell
+  Start-Process dotnet -ArgumentList @("run","--project","RefactorMCP.ConsoleApp/RefactorMCP.ConsoleApp.csproj","--","mcp") -NoNewWindow
+  ```
+
+#### “Sembra bloccato”
+
+Se lanci senza argomenti, parte il **server MCP su stdio** e attende input su STDIN.
+Questo è normale.
+Per test non-interattivi usa sempre `--json`:
+
+```powershell
+dotnet run --project RefactorMCP.ConsoleApp/RefactorMCP.ConsoleApp.csproj -- --json list-tools "{}"
+```
+
+### Output Discipline
+- **STDOUT**: Reserved strictly for MCP protocol messages and Tool results (in JSON mode).
+- **STDERR**: All logs, debug info, MSBuild warnings, and errors go here.
+- **Implication**: Agents consuming JSON output should **only** parse Stdout.
+
+---
+
+## Helper Scripts
+Located in `/scripts` for easier usage:
+- `run-mcp.ps1`: Starts the server with a banner (PowerShell).
+- `run-json.ps1`: Runs a tool with JSON params, handling quoting safely.
+- `run-json.cmd`: CMD wrapper for JSON mode.
+
+## Development
+
+### Build
+```bash
+dotnet build
+```
+
+### Smoke Tests
+```powershell
+./scripts/smoke-tests.ps1
+```
 
 ## Contributing
-
-* Run `dotnet test` to ensure all tests pass.
-* Format the code with `dotnet format` before opening a pull request.
+- Run `dotnet format` before committing.
+- Ensure `smoke-tests.ps1` passes.
+- Keep `Program.cs` logic minimal; delegate to Services.
 
 ## License
-
-Licensed under the [Mozilla Public License 2.0](https://www.mozilla.org/MPL/2.0/).
+[Mozilla Public License 2.0](https://www.mozilla.org/MPL/2.0/)
