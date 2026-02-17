@@ -38,7 +38,10 @@ public static class CleanupUsingsTool
         var diagnostics = compilation.GetDiagnostics();
         var unused = diagnostics
             .Where(d => d.Id == "CS8019")
-            .Select(d => root.FindNode(d.Location.SourceSpan))
+            .Where(d => d.Location != Location.None &&
+                        d.Location.IsInSource &&
+                        d.Location.SourceTree == root.SyntaxTree)
+            .Select(d => root.FindNode(d.Location.SourceSpan, getInnermostNodeForTie: true))
             .OfType<UsingDirectiveSyntax>()
             .ToList();
 
@@ -72,7 +75,10 @@ public static class CleanupUsingsTool
         var root = tree.GetRoot();
         var unused = diagnostics
             .Where(d => d.Id == "CS8019")
-            .Select(d => root.FindNode(d.Location.SourceSpan))
+            .Where(d => d.Location != Location.None &&
+                        d.Location.IsInSource &&
+                        d.Location.SourceTree == tree)
+            .Select(d => root.FindNode(d.Location.SourceSpan, getInnermostNodeForTie: true))
             .OfType<UsingDirectiveSyntax>()
             .ToList();
 

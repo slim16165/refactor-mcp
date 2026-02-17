@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -13,6 +14,7 @@ internal static class ToolCallLogger
 {
     private const string LogFileEnvVar = "REFACTOR_MCP_LOG_FILE";
     private static string _logFile = "tool-call-log.jsonl";
+    private static readonly object _fileLock = new();
     private static ILogger? _logger;
 
     public static string DefaultLogFile => _logFile;
@@ -25,8 +27,8 @@ internal static class ToolCallLogger
     public static void SetLogDirectory(string directory)
     {
         Directory.CreateDirectory(directory);
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-        _logFile = Path.Combine(directory, $"tool-call-log-{timestamp}.jsonl");
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+        _logFile = Path.Combine(directory, $"tool-call-log-{timestamp}-{Guid.NewGuid():N}.jsonl");
         Environment.SetEnvironmentVariable(LogFileEnvVar, _logFile);
     }
 
@@ -82,17 +84,27 @@ internal static class ToolCallLogger
             Timestamp = DateTime.UtcNow
         };
         var json = JsonSerializer.Serialize(record);
-        File.AppendAllText(file, json + Environment.NewLine);
+        AppendLineShared(file, json);
     }
 
     private static void LogDetailedRecord(DetailedToolCallRecord record)
     {
-        var dir = Path.GetDirectoryName(_logFile);
-        if (!string.IsNullOrEmpty(dir))
-            Directory.CreateDirectory(dir);
-
         var json = JsonSerializer.Serialize(record);
-        File.AppendAllText(_logFile, json + Environment.NewLine);
+        AppendLineShared(_logFile, json);
+    }
+
+    private static void AppendLineShared(string path, string line)
+    {
+        lock (_fileLock)
+        {
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+
+            using var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+            using var sw = new StreamWriter(fs, new UTF8Encoding(false));
+            sw.WriteLine(line);
+        }
     }
 
     /// <summary>

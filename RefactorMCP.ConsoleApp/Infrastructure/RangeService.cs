@@ -37,6 +37,21 @@ internal static class RangeService
             error = "Error: Range exceeds file length";
             return false;
         }
+
+        var startLineText = text.Lines[startLine - 1];
+        if (startColumn > startLineText.Span.Length + 1)
+        {
+            error = "Error: Start column exceeds line length";
+            return false;
+        }
+
+        var endLineText = text.Lines[endLine - 1];
+        if (endColumn > endLineText.Span.Length + 1)
+        {
+            error = "Error: End column exceeds line length";
+            return false;
+        }
+
         return true;
     }
 

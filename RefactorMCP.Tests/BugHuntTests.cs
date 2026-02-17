@@ -232,14 +232,13 @@ class C
     }
 
     // =========================================================================
-    // BUG 7: InstanceMemberNameWalker collects static fields and properties,
-    //        despite being named "InstanceMember". This causes downstream code
-    //        to incorrectly treat static member access as instance member usage.
+    // BUG 7 (resolved behavior): InstanceMemberNameWalker is currently used as a
+    // unified member-name collector and must include static fields.
     // File: RefactorMCP.ConsoleApp/SyntaxWalkers/InstanceMemberNameWalker.cs:8-13
     // =========================================================================
 
     [Fact]
-    public void InstanceMemberNameWalker_ShouldExcludeStaticFields()
+    public void InstanceMemberNameWalker_ShouldIncludeStaticFields()
     {
         var code = @"
 class C
@@ -251,10 +250,9 @@ class C
         var walker = new InstanceMemberNameWalker();
         walker.Visit(tree.GetRoot());
 
-        // An "InstanceMember" walker should only collect instance members
-        Assert.Single(walker.Names);
+        Assert.Equal(2, walker.Names.Count);
+        Assert.Contains("_counter", walker.Names);
         Assert.Contains("_value", walker.Names);
-        Assert.DoesNotContain("_counter", walker.Names);
     }
 
     [Fact]

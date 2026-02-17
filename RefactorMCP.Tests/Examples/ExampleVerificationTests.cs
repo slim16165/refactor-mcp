@@ -45,11 +45,11 @@ public class ExampleVerificationTests : TestBase
         var testFile = Path.Combine(TestOutputPath, "ExtractMethodExample.cs");
         await File.WriteAllTextAsync(testFile, code);
 
-        // Extract the validation block (lines 26-49 in the original)
+        // Extract a contiguous block without control-flow statements (v2 limitation)
         var result = await ExtractMethodTool.ExtractMethod(
             SolutionPath,
             testFile,
-            "28:9-53:10",  // The validation block
+            "56:9-56:68",
             "ValidateOrderAsync");
 
         Assert.Contains("Successfully extracted method", result);

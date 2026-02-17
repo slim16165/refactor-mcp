@@ -36,10 +36,17 @@ namespace RefactorMCP.ConsoleApp.SyntaxWalkers
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             base.VisitInvocationExpression(node);
-            if (node.Expression is IdentifierNameSyntax id)
+            var invokedName = node.Expression switch
             {
-                _invocations.TryGetValue(id.Identifier.ValueText, out var count);
-                _invocations[id.Identifier.ValueText] = count + 1;
+                IdentifierNameSyntax id => id.Identifier.ValueText,
+                MemberAccessExpressionSyntax member => member.Name.Identifier.ValueText,
+                _ => null
+            };
+
+            if (!string.IsNullOrEmpty(invokedName))
+            {
+                _invocations.TryGetValue(invokedName, out var count);
+                _invocations[invokedName] = count + 1;
             }
         }
 
@@ -112,7 +119,7 @@ namespace RefactorMCP.ConsoleApp.SyntaxWalkers
             foreach (var (name, _) in _fields)
             {
                 _fieldRefs.TryGetValue(name, out var count);
-                if (count <= 1)
+                if (count == 0)
                     Suggestions.Add($"Field '{name}' appears unused -> safe-delete-field");
             }
         }

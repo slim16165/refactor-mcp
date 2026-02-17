@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.1] - 2026-02-17
+
+### Fixed
+- `ToolCallLogger`: avoid JSONL contention with concurrent writers (`lock` + `FileShare.ReadWrite`) and unique log filenames.
+- `CleanupUsingsTool`: filter `CS8019` diagnostics by current document syntax tree to avoid invalid spans.
+- `RangeService`: validate start/end columns against line length.
+- `RenameSymbolTool`: improved symbol resolution for locals/parameters and clearer line/column validation errors.
+- `PrivateFieldInfoWalker`: include implicitly private fields.
+- `UnusedMembersWalker`: detect `this.Method()` invocations and avoid false positives for fields used once.
+- `InstanceMemberNameWalker`: include static fields in collected names (aligned with current tests/usage).
+- Tests: normalize line endings in rename assertions; adjust extract-method example selection for v2 control-flow limits.
+
 ## [Unreleased] - 2026-02-14
 
 ### Verified

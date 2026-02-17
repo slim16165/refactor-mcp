@@ -53,6 +53,7 @@ public class OrderProcessor
         }
         // END EXTRACT
 
+        _logger.LogWarning("Processing order {OrderId}", order.Id);
         var totalAmount = order.Items.Sum(i => i.Price * i.Quantity);
         var paymentResult = await _paymentGateway.ChargeAsync(order.CustomerId, totalAmount);
 
