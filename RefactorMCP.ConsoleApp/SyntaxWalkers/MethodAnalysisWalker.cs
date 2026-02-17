@@ -27,8 +27,12 @@ namespace RefactorMCP.ConsoleApp.SyntaxWalkers
             if (_instanceMembers.Contains(node.Identifier.ValueText))
             {
                 var parent = node.Parent;
-                if (parent is not MemberAccessExpressionSyntax ||
-                    (parent is MemberAccessExpressionSyntax ma && ma.Expression == node))
+                if (parent is MemberAccessExpressionSyntax ma)
+                {
+                    if (ma.Name == node && ma.Expression is ThisExpressionSyntax)
+                        UsesInstanceMembers = true;
+                }
+                else
                 {
                     UsesInstanceMembers = true;
                 }
@@ -53,9 +57,16 @@ namespace RefactorMCP.ConsoleApp.SyntaxWalkers
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            if (node.Expression is IdentifierNameSyntax id && _methodNames.Contains(id.Identifier.ValueText))
+            var invokedName = node.Expression switch
             {
-                if (id.Identifier.ValueText == _methodName)
+                IdentifierNameSyntax id => id.Identifier.ValueText,
+                MemberAccessExpressionSyntax ma => ma.Name.Identifier.ValueText,
+                _ => null
+            };
+
+            if (invokedName != null && _methodNames.Contains(invokedName))
+            {
+                if (invokedName == _methodName)
                 {
                     IsRecursive = true;
                 }

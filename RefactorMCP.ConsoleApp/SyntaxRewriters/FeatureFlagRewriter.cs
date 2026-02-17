@@ -62,29 +62,9 @@ internal class FeatureFlagRewriter : CSharpSyntaxRewriter
                 .AddVariables(SyntaxFactory.VariableDeclarator(_strategyField)))
                 .AddModifiers(SyntaxFactory.Token(SyntaxKind.PrivateKeyword), SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword));
             visited = visited.AddMembers(fieldDecl);
+            visited = EnsureConstructorInjection(visited);
+            visited = (ClassDeclarationSyntax)visited.NormalizeWhitespace();
             GeneratedMembers = GeneratedMembers.AddRange(CreateStrategyTypes());
-        }
-        return visited;
-    }
-
-    public override SyntaxNode VisitConstructorDeclaration(ConstructorDeclarationSyntax node)
-    {
-        var visited = (ConstructorDeclarationSyntax)base.VisitConstructorDeclaration(node)!;
-        if (_done && _targetIf != null && node.Parent?.Span.Contains(_targetIf.Span) == true)
-        {
-            var paramName = _strategyField.TrimStart('_');
-            var param = SyntaxFactory.Parameter(SyntaxFactory.Identifier(paramName))
-                .WithType(SyntaxFactory.IdentifierName(_interfaceName));
-            if (!visited.ParameterList.Parameters.Any(p => p.Identifier.ValueText == paramName))
-            {
-                visited = visited.AddParameterListParameters(param);
-                var assignment = SyntaxFactory.ExpressionStatement(
-                    SyntaxFactory.AssignmentExpression(
-                        SyntaxKind.SimpleAssignmentExpression,
-                        SyntaxFactory.IdentifierName(_strategyField),
-                        SyntaxFactory.IdentifierName(paramName)));
-                visited = visited.WithBody(visited.Body!.WithStatements(visited.Body!.Statements.Insert(0, assignment)));
-            }
         }
         return visited;
     }
@@ -94,11 +74,17 @@ internal class FeatureFlagRewriter : CSharpSyntaxRewriter
         var applyMethod = SyntaxFactory.MethodDeclaration(
                 SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
                 "Apply")
-            .WithModifiers(SyntaxFactory.TokenList())
+            .WithModifiers(SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword)))
             .WithBody(GetTrueBlock());
+
+        var interfaceApply = SyntaxFactory.MethodDeclaration(
+                SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)),
+                "Apply")
+            .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken));
+
         var iface = SyntaxFactory.InterfaceDeclaration(_interfaceName)
             .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
-            .AddMembers(applyMethod.WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)).WithBody(null));
+            .AddMembers(interfaceApply);
 
         var strat = SyntaxFactory.ClassDeclaration(_flagName + "Strategy")
             .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword))
@@ -111,7 +97,40 @@ internal class FeatureFlagRewriter : CSharpSyntaxRewriter
             .AddBaseListTypes(SyntaxFactory.SimpleBaseType(SyntaxFactory.IdentifierName(_interfaceName)))
             .AddMembers(applyMethod.WithBody(noBody));
 
-        return new SyntaxList<MemberDeclarationSyntax>(new MemberDeclarationSyntax[] { iface, strat, noStrat });
+        return new SyntaxList<MemberDeclarationSyntax>(new MemberDeclarationSyntax[]
+        {
+            (MemberDeclarationSyntax)iface.NormalizeWhitespace(),
+            (MemberDeclarationSyntax)strat.NormalizeWhitespace(),
+            (MemberDeclarationSyntax)noStrat.NormalizeWhitespace()
+        });
+    }
+
+    private ClassDeclarationSyntax EnsureConstructorInjection(ClassDeclarationSyntax classNode)
+    {
+        var paramName = _strategyField.TrimStart('_');
+        var param = SyntaxFactory.Parameter(SyntaxFactory.Identifier(paramName))
+            .WithType(SyntaxFactory.IdentifierName(_interfaceName));
+
+        foreach (var ctor in classNode.Members.OfType<ConstructorDeclarationSyntax>())
+        {
+            if (ctor.ParameterList.Parameters.Any(p => p.Identifier.ValueText == paramName))
+                continue;
+
+            var assignment = SyntaxFactory.ExpressionStatement(
+                SyntaxFactory.AssignmentExpression(
+                    SyntaxKind.SimpleAssignmentExpression,
+                    SyntaxFactory.IdentifierName(_strategyField),
+                    SyntaxFactory.IdentifierName(paramName)));
+
+            var body = ctor.Body ?? SyntaxFactory.Block();
+            var updatedCtor = ctor
+                .AddParameterListParameters(param)
+                .WithBody(body.WithStatements(body.Statements.Insert(0, assignment)));
+
+            classNode = classNode.ReplaceNode(ctor, updatedCtor);
+        }
+
+        return classNode;
     }
 
     private BlockSyntax GetTrueBlock()

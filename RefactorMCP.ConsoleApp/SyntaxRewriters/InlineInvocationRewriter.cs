@@ -54,7 +54,21 @@ internal class InlineInvocationRewriter : CSharpSyntaxRewriter
                     .ToDictionary(x => x.p.Identifier.ValueText, x => x.a.Expression);
 
                 var rewriter = new ParameterRewriter(argMap);
-                var stmts = _method.Body!.Statements.Select(s => (StatementSyntax)rewriter.Visit(s)!);
+                IEnumerable<StatementSyntax> stmts;
+                if (_method.Body != null)
+                {
+                    stmts = _method.Body.Statements.Select(s => (StatementSyntax)rewriter.Visit(s)!);
+                }
+                else if (_method.ExpressionBody != null)
+                {
+                    var inlinedExpression = (ExpressionSyntax)rewriter.Visit(_method.ExpressionBody.Expression)!;
+                    stmts = new[] { SyntaxFactory.ExpressionStatement(inlinedExpression) };
+                }
+                else
+                {
+                    stmts = Enumerable.Empty<StatementSyntax>();
+                }
+
                 newStatements.AddRange(stmts);
             }
             else

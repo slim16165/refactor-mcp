@@ -23,6 +23,10 @@ internal class SetterToInitRewriter : CSharpSyntaxRewriter
             return base.VisitPropertyDeclaration(node);
 
         var initAccessor = SyntaxFactory.AccessorDeclaration(SyntaxKind.InitAccessorDeclaration)
+            .WithAttributeLists(setter.AttributeLists)
+            .WithModifiers(setter.Modifiers)
+            .WithBody(setter.Body)
+            .WithExpressionBody(setter.ExpressionBody)
             .WithSemicolonToken(setter.SemicolonToken);
         var newAccessorList = node.AccessorList!.ReplaceNode(setter, initAccessor);
         return node.WithAccessorList(newAccessorList);

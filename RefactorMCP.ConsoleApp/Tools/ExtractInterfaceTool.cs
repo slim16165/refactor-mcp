@@ -45,10 +45,25 @@ public static class ExtractInterfaceTool
                                 .WithModifiers(new SyntaxTokenList()));
                             break;
                         case PropertyDeclarationSyntax p:
-                            var accessors = p.AccessorList ?? SyntaxFactory.AccessorList();
-                            accessors = SyntaxFactory.AccessorList(SyntaxFactory.List(
-                                accessors.Accessors.Select(a => a.WithBody(null)
-                                    .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)))));
+                            AccessorListSyntax accessors;
+                            if (p.AccessorList != null)
+                            {
+                                accessors = SyntaxFactory.AccessorList(SyntaxFactory.List(
+                                    p.AccessorList.Accessors.Select(a => a.WithBody(null)
+                                        .WithExpressionBody(null)
+                                        .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken)))));
+                            }
+                            else if (p.ExpressionBody != null)
+                            {
+                                accessors = SyntaxFactory.AccessorList(SyntaxFactory.SingletonList(
+                                    SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                                        .WithSemicolonToken(SyntaxFactory.Token(SyntaxKind.SemicolonToken))));
+                            }
+                            else
+                            {
+                                accessors = SyntaxFactory.AccessorList();
+                            }
+
                             members.Add(p.WithAccessorList(accessors).WithModifiers(new SyntaxTokenList()));
                             break;
                     }
