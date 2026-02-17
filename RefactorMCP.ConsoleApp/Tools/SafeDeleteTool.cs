@@ -329,6 +329,8 @@ public static class SafeDeleteTool
         var tree = CSharpSyntaxTree.ParseText(sourceText);
         var root = tree.GetRoot();
         var text = SourceText.From(sourceText);
+        ToolParameterValidator.ValidateSelectionRange(selectionRange, text);
+        
         var span = RefactoringHelpers.ParseSelectionRange(text, selectionRange);
         var variable = root.DescendantNodes(span).OfType<VariableDeclaratorSyntax>().FirstOrDefault();
         if (variable == null)

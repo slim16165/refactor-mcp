@@ -36,7 +36,7 @@ public class Sample
 
         Assert.Contains("Successfully converted setter", result);
         var fileContent = await File.ReadAllTextAsync(testFile);
-        Assert.Equal(expectedCode.Replace("\r\n", "\n"), fileContent.Replace("\r\n", "\n"));
+        Assert.Equal(NormalizeLineEndings(expectedCode), NormalizeLineEndings(fileContent));
     }
 
     [Fact]

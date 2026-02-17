@@ -13,15 +13,49 @@ using ModelContextProtocol.Server;
 internal static class ToolCallLogger
 {
     private const string LogFileEnvVar = "REFACTOR_MCP_LOG_FILE";
+    private const string DisableLoggingEnvVar = "REFACTOR_MCP_DISABLE_LOGGING";
     private static string _logFile = "tool-call-log.jsonl";
     private static readonly object _fileLock = new();
     private static ILogger? _logger;
+    private static bool _loggingDisabled = false;
+    private static bool _initialized = false;
 
     public static string DefaultLogFile => _logFile;
+
+    private static bool ParseDisableLoggingFlag(string? disableLogging)
+    {
+        if (string.IsNullOrEmpty(disableLogging))
+            return false;
+            
+        // Support multiple boolean representations, case-insensitive
+        var normalized = disableLogging.Trim().ToLowerInvariant();
+        return normalized is "true" or "1" or "yes" or "on";
+    }
 
     public static void InitializeLogger(ILogger logger)
     {
         _logger = logger;
+        // Check if logging is disabled via environment variable
+        var disableLogging = Environment.GetEnvironmentVariable(DisableLoggingEnvVar);
+        _loggingDisabled = ParseDisableLoggingFlag(disableLogging);
+        _initialized = true;
+    }
+
+    private static void EnsureInitialized()
+    {
+        if (!_initialized)
+        {
+            lock (_fileLock)
+            {
+                if (!_initialized) // Double-check inside lock
+                {
+                    // Lazy initialization - check environment variable if not explicitly initialized
+                    var disableLogging = Environment.GetEnvironmentVariable(DisableLoggingEnvVar);
+                    _loggingDisabled = ParseDisableLoggingFlag(disableLogging);
+                    _initialized = true;
+                }
+            }
+        }
     }
 
     public static void SetLogDirectory(string directory)
@@ -72,6 +106,9 @@ internal static class ToolCallLogger
     /// </summary>
     public static void Log(string toolName, Dictionary<string, string?> parameters, string? logFile = null)
     {
+        EnsureInitialized();
+        if (_loggingDisabled) return;
+        
         var file = logFile ?? DefaultLogFile;
         var dir = Path.GetDirectoryName(file);
         if (!string.IsNullOrEmpty(dir))
@@ -89,21 +126,57 @@ internal static class ToolCallLogger
 
     private static void LogDetailedRecord(DetailedToolCallRecord record)
     {
+        EnsureInitialized();
+        if (_loggingDisabled) return;
+        
         var json = JsonSerializer.Serialize(record);
         AppendLineShared(_logFile, json);
     }
 
     private static void AppendLineShared(string path, string line)
     {
-        lock (_fileLock)
-        {
-            var dir = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(dir))
-                Directory.CreateDirectory(dir);
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
 
-            using var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-            using var sw = new StreamWriter(fs, new UTF8Encoding(false));
-            sw.WriteLine(line);
+        // Retry logic for file access conflicts - minimal blocking inside lock
+        const int maxRetries = 3;
+        const int retryDelayMs = 10; // Shorter delay to reduce lock time
+        
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                lock (_fileLock)
+                {
+                    using var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                    using var sw = new StreamWriter(fs, new UTF8Encoding(false));
+                    sw.WriteLine(line);
+                }
+                return; // Success, exit retry loop
+            }
+            catch (IOException ex) when (attempt < maxRetries - 1) // Catch ALL IOExceptions for retry
+            {
+                _logger?.LogWarning(ex, "File access conflict on {FilePath}, retry {Attempt}/{MaxRetries}", path, attempt + 1, maxRetries);
+                // Sleep OUTSIDE lock to avoid blocking other threads
+                Thread.Sleep(retryDelayMs * (attempt + 1)); // Exponential backoff
+            }
+        }
+        
+        // Final attempt - swallow any exception to avoid crashing, just warn
+        try
+        {
+            lock (_fileLock)
+            {
+                using var finalFs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                using var finalSw = new StreamWriter(finalFs, new UTF8Encoding(false));
+                finalSw.WriteLine(line);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Logging is non-critical - just warn and continue
+            _logger?.LogWarning(ex, "Failed to write to log file after {MaxRetries} retries: {FilePath}", maxRetries, path);
         }
     }
 

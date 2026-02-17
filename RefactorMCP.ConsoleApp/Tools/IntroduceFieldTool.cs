@@ -13,6 +13,12 @@ public static class IntroduceFieldTool
     {
         try
         {
+            solutionPath = ToolParameterValidator.ValidateSolutionPath(solutionPath);
+            filePath = ToolParameterValidator.ValidateFilePath(filePath);
+            ToolParameterValidator.ValidateRequiredString(selectionRange, nameof(selectionRange));
+            ToolParameterValidator.ValidateRequiredString(fieldName, nameof(fieldName));
+            ToolParameterValidator.ValidateRequiredString(accessModifier, nameof(accessModifier));
+
             return await RefactoringHelpers.RunWithSolutionOrFile(
                 solutionPath,
                 filePath,

@@ -2,7 +2,7 @@ using Xunit;
 
 namespace RefactorMCP.Tests.Tools;
 
-public class InlineMethodInSourceTests
+public class InlineMethodInSourceTests : RefactorMCP.Tests.TestBase
 {
     [Fact]
     public void InlineMethodInSource_ReplacesInvocationWithBody()
@@ -22,7 +22,7 @@ public class InlineMethodInSourceTests
 }";
         var expected = "class InlineSample\n{\n\n    public void Call()\n    {\n        Console.WriteLine(\"Hi\");\n        Console.WriteLine(\"Done\");\n    }\n}";
         var output = InlineMethodTool.InlineMethodInSource(input, "Helper");
-        Assert.Equal(expected, output.Trim());
+        Assert.Equal(NormalizeLineEndings(expected), NormalizeLineEndings(output.Trim()));
     }
 }
 

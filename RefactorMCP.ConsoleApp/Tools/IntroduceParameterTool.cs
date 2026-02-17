@@ -94,6 +94,12 @@ public static class IntroduceParameterTool
     {
         try
         {
+            solutionPath = ToolParameterValidator.ValidateSolutionPath(solutionPath);
+            filePath = ToolParameterValidator.ValidateFilePath(filePath);
+            ToolParameterValidator.ValidateRequiredString(methodName, nameof(methodName));
+            ToolParameterValidator.ValidateRequiredString(selectionRange, nameof(selectionRange));
+            ToolParameterValidator.ValidateRequiredString(parameterName, nameof(parameterName));
+
             return await RefactoringHelpers.RunWithSolutionOrFile(
                 solutionPath,
                 filePath,

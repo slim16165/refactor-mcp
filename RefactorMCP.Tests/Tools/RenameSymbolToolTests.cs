@@ -9,7 +9,6 @@ namespace RefactorMCP.Tests.Tools;
 
 public class RenameSymbolToolTests : RefactorMCP.Tests.TestBase
 {
-    private static string NormalizeLineEndings(string text) => text.Replace("\r\n", "\n");
 
     [Fact]
     public async Task RenameSymbol_Field_RenamesReferences()

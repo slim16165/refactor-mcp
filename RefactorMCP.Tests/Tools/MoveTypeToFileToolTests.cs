@@ -34,8 +34,8 @@ public class MoveTypeToFileToolTests : RefactorMCP.Tests.TestBase
         var targetFile = Path.Combine(TestOutputPath, $"{typeName}.cs");
         var targetContent = await File.ReadAllTextAsync(targetFile);
         Assert.Equal(
-            code.Replace("\r\n", "\n").TrimEnd(),
-            targetContent.Replace("\r\n", "\n").TrimEnd());
+            NormalizeLineEndings(code.TrimEnd()),
+            NormalizeLineEndings(targetContent.TrimEnd()));
     }
 
     [Fact]

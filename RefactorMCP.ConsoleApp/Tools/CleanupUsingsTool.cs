@@ -41,6 +41,7 @@ public static class CleanupUsingsTool
             .Where(d => d.Location != Location.None &&
                         d.Location.IsInSource &&
                         d.Location.SourceTree == root.SyntaxTree)
+            .Where(d => IsValidSpan(root, d.Location.SourceSpan))
             .Select(d => root.FindNode(d.Location.SourceSpan, getInnermostNodeForTie: true))
             .OfType<UsingDirectiveSyntax>()
             .ToList();
@@ -78,6 +79,7 @@ public static class CleanupUsingsTool
             .Where(d => d.Location != Location.None &&
                         d.Location.IsInSource &&
                         d.Location.SourceTree == tree)
+            .Where(d => IsValidSpan(root, d.Location.SourceSpan))
             .Select(d => root.FindNode(d.Location.SourceSpan, getInnermostNodeForTie: true))
             .OfType<UsingDirectiveSyntax>()
             .ToList();
@@ -86,5 +88,15 @@ public static class CleanupUsingsTool
         if (newRoot == null) return sourceText;
         var formatted = Formatter.Format(newRoot, RefactoringHelpers.SharedWorkspace);
         return formatted.ToFullString();
+    }
+
+    /// <summary>
+    /// Validates that a diagnostic span is within the bounds of the syntax root
+    /// </summary>
+    private static bool IsValidSpan(SyntaxNode root, TextSpan span)
+    {
+        return span.Start >= 0 && 
+               span.End <= root.FullSpan.End && 
+               span.Start <= span.End;
     }
 }
