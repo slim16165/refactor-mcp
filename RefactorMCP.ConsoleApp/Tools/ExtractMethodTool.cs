@@ -37,6 +37,8 @@ public static class ExtractMethodTool
     private static async Task<string> ExtractMethodWithSolution(Document document, string selectionRange, string methodName, bool dryRun, bool verbose)
     {
         var sourceText = await document.GetTextAsync();
+        ToolParameterValidator.ValidateSelectionRange(selectionRange, sourceText);
+        
         var syntaxRoot = await document.GetSyntaxRootAsync();
         var semanticModel = await document.GetSemanticModelAsync();
         var span = RefactoringHelpers.ParseSelectionRange(sourceText, selectionRange);
@@ -132,6 +134,8 @@ public static class ExtractMethodTool
             .AddSyntaxTrees(tree);
         var semanticModel = compilation.GetSemanticModel(tree);
         var text = SourceText.From(sourceText);
+        ToolParameterValidator.ValidateSelectionRange(selectionRange, text);
+        
         var span = RefactoringHelpers.ParseSelectionRange(text, selectionRange);
 
         var selectedNodes = syntaxRoot.DescendantNodes()

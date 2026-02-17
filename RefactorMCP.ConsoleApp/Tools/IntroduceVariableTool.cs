@@ -27,6 +27,8 @@ public static class IntroduceVariableTool
     private static async Task<string> IntroduceVariableWithSolution(Document document, string selectionRange, string variableName)
     {
         var sourceText = await document.GetTextAsync();
+        ToolParameterValidator.ValidateSelectionRange(selectionRange, sourceText);
+        
         var syntaxRoot = await document.GetSyntaxRootAsync();
         var span = RefactoringHelpers.ParseSelectionRange(sourceText, selectionRange);
 
@@ -91,6 +93,8 @@ public static class IntroduceVariableTool
         var syntaxTree = model?.SyntaxTree ?? CSharpSyntaxTree.ParseText(sourceText);
         var syntaxRoot = syntaxTree.GetRoot();
         var text = syntaxTree.GetText();
+        ToolParameterValidator.ValidateSelectionRange(selectionRange, text);
+        
         var span = RefactoringHelpers.ParseSelectionRange(text, selectionRange);
 
         var selectedExpression = syntaxRoot.DescendantNodes()

@@ -41,8 +41,16 @@ public static class MoveMethodTool
     {
         try
         {
+            solutionPath = ToolParameterValidator.ValidateSolutionPath(solutionPath);
+            filePath = ToolParameterValidator.ValidateFilePath(filePath);
+            ToolParameterValidator.ValidateRequiredString(methodName, nameof(methodName));
+            ToolParameterValidator.ValidateRequiredString(targetClass, nameof(targetClass));
+
+            targetFilePath = targetFilePath == null 
+                ? null 
+                : ToolParameterValidator.ValidateTargetFilePath(targetFilePath);
+
             EnsureNotAlreadyMoved(filePath, methodName);
-            MoveMethodFileService.ValidateFileExists(filePath);
 
             var moveContext = await PrepareStaticMethodMove(filePath, targetFilePath, targetClass, cancellationToken);
             var solution = await RefactoringHelpers.GetOrLoadSolution(solutionPath, cancellationToken);
@@ -60,6 +68,7 @@ public static class MoveMethodTool
 
             return $"Successfully moved static method '{methodName}' to {targetClass} in {moveContext.TargetPath}. A delegate method remains in the original class to preserve the interface.";
         }
+        catch (McpException) { throw; }
         catch (Exception ex)
         {
             throw new McpException($"Error moving static method: {ex.Message}", ex);
@@ -226,13 +235,20 @@ public static class MoveMethodTool
     {
         try
         {
-            filePath = Path.GetFullPath(filePath);
-            if (targetFilePath != null)
-                targetFilePath = Path.GetFullPath(targetFilePath);
+            solutionPath = ToolParameterValidator.ValidateSolutionPath(solutionPath);
+            filePath = ToolParameterValidator.ValidateFilePath(filePath);
+            ToolParameterValidator.ValidateRequiredString(sourceClass, nameof(sourceClass));
+            ToolParameterValidator.ValidateRequiredString(targetClass, nameof(targetClass));
+            ToolParameterValidator.ValidateDistinctClasses(sourceClass, targetClass);
+            methodNames = ToolParameterValidator.ValidateStringArray(methodNames, nameof(methodNames));
+            constructorInjections = ToolParameterValidator.SanitizeOptionalStringArray(constructorInjections);
+            parameterInjections = ToolParameterValidator.SanitizeOptionalStringArray(parameterInjections);
+
+            targetFilePath = targetFilePath == null 
+                ? null 
+                : ToolParameterValidator.ValidateTargetFilePath(targetFilePath);
 
             var methodList = methodNames;
-            if (methodList.Length == 0)
-                throw new McpException("Error: No method names provided");
 
             foreach (var m in methodList)
                 EnsureNotAlreadyMoved(filePath, m);
@@ -324,6 +340,7 @@ public static class MoveMethodTool
 
             return message;
         }
+        catch (McpException) { throw; }
         catch (Exception ex)
         {
             throw new McpException($"Error moving instance method: {ex.Message}", ex);

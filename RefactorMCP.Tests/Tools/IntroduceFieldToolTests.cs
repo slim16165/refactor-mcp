@@ -42,7 +42,7 @@ public class Sample
         var result = await IntroduceFieldTool.IntroduceField(
             SolutionPath,
             testFile,
-            "6:16-6:57",
+            "6:16-6:28",
             "_avg");
 
         Assert.Contains("Successfully introduced", result);
@@ -74,7 +74,7 @@ public class Sample
             var result = await IntroduceFieldTool.IntroduceField(
                 SolutionPath,
                 file,
-                "6:16-6:57",
+                "6:16-6:28",
                 $"_{modifier}Field",
                 modifier);
 

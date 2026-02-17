@@ -28,6 +28,8 @@ public static class IntroduceFieldTool
     private static async Task<string> IntroduceFieldWithSolution(Document document, string selectionRange, string fieldName, string accessModifier)
     {
         var sourceText = await document.GetTextAsync();
+        ToolParameterValidator.ValidateSelectionRange(selectionRange, sourceText);
+        
         var syntaxRoot = await document.GetSyntaxRootAsync();
         var span = RefactoringHelpers.ParseSelectionRange(sourceText, selectionRange);
 
@@ -98,6 +100,8 @@ public static class IntroduceFieldTool
         var syntaxTree = model?.SyntaxTree ?? CSharpSyntaxTree.ParseText(sourceText);
         var syntaxRoot = syntaxTree.GetRoot();
         var text = syntaxTree.GetText();
+        ToolParameterValidator.ValidateSelectionRange(selectionRange, text);
+        
         var span = RefactoringHelpers.ParseSelectionRange(text, selectionRange);
 
         var selectedExpression = syntaxRoot.DescendantNodes()

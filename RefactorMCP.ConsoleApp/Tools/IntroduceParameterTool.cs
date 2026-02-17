@@ -6,6 +6,8 @@ public static class IntroduceParameterTool
     private static async Task<string> IntroduceParameterWithSolution(Document document, string methodName, string selectionRange, string parameterName)
     {
         var sourceText = await document.GetTextAsync();
+        ToolParameterValidator.ValidateSelectionRange(selectionRange, sourceText);
+        
         var syntaxRoot = await document.GetSyntaxRootAsync();
 
         var method = syntaxRoot!.DescendantNodes()
@@ -51,6 +53,7 @@ public static class IntroduceParameterTool
         var syntaxTree = CSharpSyntaxTree.ParseText(sourceText);
         var syntaxRoot = syntaxTree.GetRoot();
         var text = SourceText.From(sourceText);
+        ToolParameterValidator.ValidateSelectionRange(selectionRange, text);
 
         var method = syntaxRoot.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()

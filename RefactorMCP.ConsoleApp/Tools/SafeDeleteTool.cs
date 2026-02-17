@@ -292,6 +292,8 @@ public static class SafeDeleteTool
     private static async Task<string> SafeDeleteVariableWithSolution(Document document, string selectionRange)
     {
         var text = await document.GetTextAsync();
+        ToolParameterValidator.ValidateSelectionRange(selectionRange, text);
+        
         var root = await document.GetSyntaxRootAsync();
         var span = RefactoringHelpers.ParseSelectionRange(text, selectionRange);
         var variable = root!.DescendantNodes(span).OfType<VariableDeclaratorSyntax>().FirstOrDefault();
